@@ -20,7 +20,7 @@ pub async fn write_icalendar(file: &mut File, lectures: Vec<Lecture>)
 
     write_short_line(&mut writer, "END:VCALENDAR").await?;
 
-    writer.flush().await;
+    writer.flush().await?;
     Ok(())
 }
 
@@ -33,6 +33,7 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
     write_short_line(writer, format!("DTEND:{}", lecture.end_time().format(ICALENDAR_DATE_TIME_FORMAT)).as_str()).await?;
     write_field(writer, "SUMMARY", lecture.name()).await?;
     write_field(writer, "LOCATION", &lecture.rooms().join(", ")).await?;
+    write_field(writer, "DESCRIPTION", format!("Dozent:innen: {}", lecture.lecturers().join(", "))).await?;
 
     for lecturer in lecture.lecturers() {
         write_line(writer, format!("ATTENDEE;CN=\"{}\":noreply@mosbach.dhbw.de", lecturer).as_str()).await?;
