@@ -53,12 +53,11 @@ pub async fn get_courses(client: &reqwest::Client, base_url: &str) -> Result<Vec
     )
 }
 
-pub async fn get_lectures(client: &reqwest::Client, base_url: &str, course: &str) -> Result<Vec<Lecture>, Box<dyn std::error::Error>> {
-    Ok(
+pub async fn get_lectures(client: &reqwest::Client, base_url: &str, course: &str, archived: bool) -> Result<Vec<Lecture>, Box<dyn std::error::Error>> {
+    let request = if archived {
+        client.get(format!("{}/rapla/lectures/{}?archived=true", base_url, course))
+    } else {
         client.get(format!("{}/rapla/lectures/{}", base_url, course))
-            .send()
-            .await?
-            .json()
-            .await?
-    )
+    };
+    Ok(request.send().await?.json().await?)
 }
