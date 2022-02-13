@@ -39,6 +39,10 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
         format!("Dozent:innen: {}", lecture.lecturers().join(" & "))
     }).await?;
 
+    if lecture.is_exam() {
+        write_short_line(writer, "PRIORITY:1").await?;
+    }
+
     for lecturer in lecture.lecturers() {
         write_line(writer, format!("ATTENDEE;CN=\"{}\":noreply@mosbach.dhbw.de", lecturer).as_str()).await?;
     }
