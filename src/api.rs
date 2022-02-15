@@ -44,7 +44,11 @@ impl Lecture {
 
     pub fn is_exam(&self) -> bool {
         let name_lower = self.name.to_lowercase();
-        name_lower.contains("klausur") || name_lower.contains("prüfung")
+        name_lower.starts_with("klausur ") || name_lower.starts_with("prüfung ")
+    }
+
+    pub fn is_online(&self) -> bool {
+        self.rooms.iter().any(|loc| loc.to_lowercase().contains("online"))
     }
 }
 
