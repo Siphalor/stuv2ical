@@ -41,6 +41,11 @@ impl Lecture {
         }
         return lecturers;
     }
+
+    pub fn is_exam(&self) -> bool {
+        let name_lower = self.name.to_lowercase();
+        name_lower.contains("klausur") || name_lower.contains("prüfung")
+    }
 }
 
 pub async fn get_courses(client: &awc::Client, base_url: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
