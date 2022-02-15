@@ -39,8 +39,23 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
         format!("Dozent:innen: {}", lecture.lecturers().join(" & "))
     }).await?;
 
+    let mut categories = vec![];
+
     if lecture.is_exam() {
         write_short_line(writer, "PRIORITY:1").await?;
+        categories.push("EXAM");
+    }
+
+    if !lecture.rooms().is_empty() {
+        if lecture.is_online() {
+            categories.push("ONLINE");
+        } else {
+            categories.push("PRESENCE");
+        }
+    }
+
+    if !categories.is_empty() {
+        write_line(writer, format!("CATEGORIES:{}", categories.join(",")).as_str()).await?;
     }
 
     for lecturer in lecture.lecturers() {
