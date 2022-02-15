@@ -33,7 +33,7 @@ struct Opts {
     request_archived: bool,
 }
 
-#[tokio::main]
+#[actix_rt::main]
 async fn main() {
     dotenv::dotenv().ok();
 
@@ -69,13 +69,11 @@ async fn main() {
     println!("Done.");
 }
 
-fn create_client() -> reqwest::Client {
-    reqwest::ClientBuilder::new()
-        .user_agent("StuV2iCal")
-        .build().expect("Failed to create client!")
+fn create_client() -> awc::Client {
+    awc::Client::new()
 }
 
-async fn process_course(client: &reqwest::Client, output_directory: &Path, base_url: &str, course: &str, archived: bool)
+async fn process_course(client: &awc::Client, output_directory: &Path, base_url: &str, course: &str, archived: bool)
     -> Result<(), Box<dyn std::error::Error>> {
     println!("Loading lecture data for course {}", course);
     let lectures = get_lectures(client, base_url, course, archived).await?;

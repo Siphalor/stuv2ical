@@ -43,7 +43,7 @@ impl Lecture {
     }
 }
 
-pub async fn get_courses(client: &reqwest::Client, base_url: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub async fn get_courses(client: &awc::Client, base_url: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     Ok(
         client.get(format!("{}/rapla/courses", base_url))
             .send()
@@ -53,7 +53,7 @@ pub async fn get_courses(client: &reqwest::Client, base_url: &str) -> Result<Vec
     )
 }
 
-pub async fn get_lectures(client: &reqwest::Client, base_url: &str, course: &str, archived: bool) -> Result<Vec<Lecture>, Box<dyn std::error::Error>> {
+pub async fn get_lectures(client: &awc::Client, base_url: &str, course: &str, archived: bool) -> Result<Vec<Lecture>, Box<dyn std::error::Error>> {
     let request = if archived {
         client.get(format!("{}/rapla/lectures/{}?archived=true", base_url, course))
     } else {
