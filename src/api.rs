@@ -44,7 +44,10 @@ impl Lecture {
 
     pub fn is_exam(&self) -> bool {
         let name_lower = self.name.to_lowercase();
-        name_lower.starts_with("klausur ") || name_lower.starts_with("prüfung ") || name_lower.starts_with("prüfungswahl ")
+        if let Some(first_word) = name_lower.split(' ').next() {
+            return first_word.ends_with("klausur") || first_word == "prüfung" || first_word == "prüfungswahl";
+        }
+        return false;
     }
 
     pub fn is_online(&self) -> bool {
