@@ -2,7 +2,7 @@ use chrono::Utc;
 use tokio::fs::File;
 use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 
-use crate::api::Lecture;
+use crate::api::{Lecture, EventType};
 
 const ICALENDAR_DATE_TIME_FORMAT: &str = "%Y%m%dT%H%M%SZ";
 
@@ -41,13 +41,21 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
 
     let mut categories = vec![];
 
-    if lecture.is_exam() {
-        write_short_line(writer, "PRIORITY:1").await?;
-        categories.push("EXAM");
+    match lecture.event_type() {
+        EventType::Exam => {
+            write_short_line(writer, "PRIORITY:1").await?;
+            categories.push("EXAM");
+        },
+        EventType::Holiday => {
+            categories.push("HOLIDAY");
+        },
+        EventType::Lecture => {
+            categories.push("LECTURE");
+        }
     }
 
     if !lecture.rooms().is_empty() {
-        if lecture.is_online() {
+        if lecture.online() {
             categories.push("ONLINE");
         } else {
             categories.push("PRESENCE");
