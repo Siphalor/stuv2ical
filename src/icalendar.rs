@@ -2,17 +2,27 @@ use chrono::Utc;
 use tokio::fs::File;
 use tokio::io::{AsyncWrite, AsyncWriteExt, BufWriter};
 
-use crate::api::{Lecture, EventType};
+use crate::api::{EventType, Lecture};
 
 const ICALENDAR_DATE_TIME_FORMAT: &str = "%Y%m%dT%H%M%SZ";
 
-pub async fn write_icalendar(file: &mut File, lectures: Vec<Lecture>)
-                             -> Result<(), Box<dyn std::error::Error>> {
+pub async fn write_icalendar(
+    file: &mut File,
+    lectures: Vec<Lecture>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut writer = BufWriter::new(file);
     write_short_line(&mut writer, "BEGIN:VCALENDAR").await?;
     write_short_line(&mut writer, "VERSION:2.0").await?;
     write_short_line(&mut writer, "PRODID:-//Siphalor//StuV2iCal//DE").await?;
-    write_short_line(&mut writer, format!("X-STUV2ICAL-CREATION:{}", Utc::now().format("%d.%m.%Y %H:%M")).as_str()).await?;
+    write_short_line(
+        &mut writer,
+        format!(
+            "X-STUV2ICAL-CREATION:{}",
+            Utc::now().format("%d.%m.%Y %H:%M")
+        )
+        .as_str(),
+    )
+    .await?;
 
     for lecture in &lectures {
         write_lecture(&mut writer, lecture).await?;
@@ -24,20 +34,52 @@ pub async fn write_icalendar(file: &mut File, lectures: Vec<Lecture>)
     Ok(())
 }
 
-async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lecture: &Lecture)
-                                                           -> Result<(), Box<dyn std::error::Error>> {
+async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(
+    writer: &mut W,
+    lecture: &Lecture,
+) -> Result<(), Box<dyn std::error::Error>> {
     write_short_line(writer, "BEGIN:VEVENT").await?;
-    write_short_line(writer, format!("UID:{}@mosbach.dhbw.de", lecture.id()).as_str()).await?;
-    write_short_line(writer, format!("DTSTAMP:{}", Utc::now().format(ICALENDAR_DATE_TIME_FORMAT)).as_str()).await?;
-    write_short_line(writer, format!("DTSTART:{}", lecture.start_time().format(ICALENDAR_DATE_TIME_FORMAT)).as_str()).await?;
-    write_short_line(writer, format!("DTEND:{}", lecture.end_time().format(ICALENDAR_DATE_TIME_FORMAT)).as_str()).await?;
+    write_short_line(
+        writer,
+        format!("UID:{}@mosbach.dhbw.de", lecture.id()).as_str(),
+    )
+    .await?;
+    write_short_line(
+        writer,
+        format!("DTSTAMP:{}", Utc::now().format(ICALENDAR_DATE_TIME_FORMAT)).as_str(),
+    )
+    .await?;
+    write_short_line(
+        writer,
+        format!(
+            "DTSTART:{}",
+            lecture.start_time().format(ICALENDAR_DATE_TIME_FORMAT)
+        )
+        .as_str(),
+    )
+    .await?;
+    write_short_line(
+        writer,
+        format!(
+            "DTEND:{}",
+            lecture.end_time().format(ICALENDAR_DATE_TIME_FORMAT)
+        )
+        .as_str(),
+    )
+    .await?;
     write_field(writer, "SUMMARY", lecture.name()).await?;
     write_field(writer, "LOCATION", &lecture.rooms().join(", ")).await?;
-    write_field(writer, "DESCRIPTION", if lecture.lecturers().is_empty() {
-        "Dozent:innen sind aufgrund von Datenschutzbedenken der DHBW nicht mehr öffentlich!".to_string()
-    } else {
-        format!("Dozent:innen: {}", lecture.lecturers().join(" & "))
-    }).await?;
+    write_field(
+        writer,
+        "DESCRIPTION",
+        if lecture.lecturers().is_empty() {
+            "Dozent:innen sind aufgrund von Datenschutzbedenken der DHBW nicht mehr öffentlich!"
+                .to_string()
+        } else {
+            format!("Dozent:innen: {}", lecture.lecturers().join(" & "))
+        },
+    )
+    .await?;
 
     let mut categories = vec![];
 
@@ -45,10 +87,10 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
         EventType::Exam => {
             write_short_line(writer, "PRIORITY:1").await?;
             categories.push("EXAM");
-        },
+        }
         EventType::Holiday => {
             categories.push("HOLIDAY");
-        },
+        }
         EventType::Lecture => {
             categories.push("LECTURE");
         }
@@ -63,20 +105,34 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, lectu
     }
 
     if !categories.is_empty() {
-        write_line(writer, format!("CATEGORIES:{}", categories.join(",")).as_str()).await?;
+        write_line(
+            writer,
+            format!("CATEGORIES:{}", categories.join(",")).as_str(),
+        )
+        .await?;
     }
 
     for lecturer in lecture.lecturers() {
-        write_line(writer, format!("ATTENDEE;CN=\"{}\":noreply@mosbach.dhbw.de", lecturer).as_str()).await?;
+        write_line(
+            writer,
+            format!("ATTENDEE;CN=\"{}\":noreply@mosbach.dhbw.de", lecturer).as_str(),
+        )
+        .await?;
     }
     write_short_line(writer, "END:VEVENT").await?;
     Ok(())
 }
 
 /// Safely writes a field with necessary escaping
-async fn write_field<W: AsyncWrite + std::marker::Unpin, K, V>(writer: &mut W, key: K, value: V)
-                                                               -> Result<(), Box<dyn std::error::Error>>
-    where K: Into<String>, V: Into<String> {
+async fn write_field<W: AsyncWrite + std::marker::Unpin, K, V>(
+    writer: &mut W,
+    key: K,
+    value: V,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    K: Into<String>,
+    V: Into<String>,
+{
     let key = key.into();
     let value = value.into().replace(",", "\\,");
     let line = format!("{}:{}", &key, &value);
@@ -85,15 +141,19 @@ async fn write_field<W: AsyncWrite + std::marker::Unpin, K, V>(writer: &mut W, k
 }
 
 /// Writes a short line with should not exceed the maximum line length
-async fn write_short_line<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, line: &str)
-                                                              -> Result<(), Box<dyn std::error::Error>> {
+async fn write_short_line<W: AsyncWrite + std::marker::Unpin>(
+    writer: &mut W,
+    line: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     writer.write(format!("{}\r\n", line).as_bytes()).await?;
     Ok(())
 }
 
 /// Writes a variable length line with the correct splitting of long lines.
-async fn write_line<W: AsyncWrite + std::marker::Unpin>(writer: &mut W, line: &str)
-                                                        -> Result<(), Box<dyn std::error::Error>> {
+async fn write_line<W: AsyncWrite + std::marker::Unpin>(
+    writer: &mut W,
+    line: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut line_rest = line;
 
     let mut first = true;

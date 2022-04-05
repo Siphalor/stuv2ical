@@ -1,19 +1,19 @@
 mod api;
 mod icalendar;
 
-use std::fs::create_dir_all;
-use std::path::Path;
-use clap::Parser;
-use tokio::fs::File;
 use crate::api::{get_courses, get_lectures};
 use crate::icalendar::write_icalendar;
+use clap::Parser;
+use std::fs::create_dir_all;
+use std::path::Path;
+use tokio::fs::File;
 
 #[derive(Parser)]
 #[clap(
     version = "0.2",
     author = "Siphalor <info@siphalor.de>",
     rename_all = "kebab",
-    about = "An unofficial program that uses the StuV API to generate iCalendar files.",
+    about = "An unofficial program that uses the StuV API to generate iCalendar files."
 )]
 struct Opts {
     /// The output directory for the iCalendar files
@@ -21,7 +21,7 @@ struct Opts {
     output_directory: String,
 
     /// The base url of the StuV API
-    #[clap(short, long, env="API-BASE-URL")]
+    #[clap(short, long, env = "API-BASE-URL")]
     api_base_url: Option<String>,
 
     /// A course to query. Querying for all courses if none is specified.
@@ -39,7 +39,8 @@ async fn main() {
 
     let opts: Opts = Opts::parse();
 
-    let api_base_url = opts.api_base_url
+    let api_base_url = opts
+        .api_base_url
         .or_else(|| dotenv::var("API_BASE_URL").ok())
         .expect("No API base url specified!");
     let output_dir = Path::new(&opts.output_directory);
@@ -59,10 +60,19 @@ async fn main() {
     println!("Got {} courses", courses.len());
 
     for course in courses {
-        let result = process_course(&client, &output_dir, api_base_url.as_str(), course.as_str(), opts.request_archived)
-            .await;
+        let result = process_course(
+            &client,
+            &output_dir,
+            api_base_url.as_str(),
+            course.as_str(),
+            opts.request_archived,
+        )
+        .await;
         if let Err(err) = result {
-            println!("Failed to write calendar file for course {}: {:?}", course, err);
+            println!(
+                "Failed to write calendar file for course {}: {:?}",
+                course, err
+            );
         }
     }
 
@@ -73,12 +83,21 @@ fn create_client() -> awc::Client {
     awc::Client::new()
 }
 
-async fn process_course(client: &awc::Client, output_directory: &Path, base_url: &str, course: &str, archived: bool)
-    -> Result<(), Box<dyn std::error::Error>> {
+async fn process_course(
+    client: &awc::Client,
+    output_directory: &Path,
+    base_url: &str,
+    course: &str,
+    archived: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Loading lecture data for course {}", course);
     let lectures = get_lectures(client, base_url, course, archived).await?;
 
-    println!("Writing calendar file for course {} with {} lectures", course, lectures.len());
+    println!(
+        "Writing calendar file for course {} with {} lectures",
+        course,
+        lectures.len()
+    );
     let mut file = File::create(output_directory.join(format!("{}.ics", course))).await?;
     write_icalendar(&mut file, lectures).await?;
 
