@@ -90,8 +90,7 @@ impl From<internal::Lecture> for Lecture {
         let mut event_type = EventType::Lecture;
         {
             if base.end_time.signed_duration_since(base.start_time) == chrono::Duration::hours(10)
-                && base.start_time.hour() == 8
-                && base.start_time.minute() == 0
+                && rooms.is_empty()
             {
                 event_type = EventType::Holiday;
             }
