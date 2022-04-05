@@ -89,6 +89,7 @@ async fn write_lecture<W: AsyncWrite + std::marker::Unpin>(
             categories.push("EXAM");
         }
         EventType::Holiday => {
+            write_short_line(writer, "TRANSP:TRANSPARENT").await?; // mark as free time
             categories.push("HOLIDAY");
         }
         EventType::Lecture => {
